@@ -11,12 +11,11 @@ require (
 	github.com/shurcooL/go v0.0.0-20171108033853-004faa6b0118
 	golang.org/x/mod v0.4.3-0.20210409134425-858fdbee9c24
 	golang.org/x/oauth2 v0.0.0-20171205225816-ea8c6730ed5b
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0-20170531160350-a96e63847dc3
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
