@@ -73,6 +73,8 @@ type BranchRule struct {
 type RepositoryRule struct {
 	DestinationRepository string       `yaml:"destination"`
 	Branches              []BranchRule `yaml:"branches"`
+	// the value to use as vX in vX.Y.Z published at the destination repo
+	DestinationTagBase string `yaml:"destination-tag-base,omitempty"`
 	// SmokeTest applies to all branches
 	SmokeTest string `yaml:"smoke-test,omitempty"` // a multiline bash script
 	Library   bool   `yaml:"library,omitempty"`
@@ -81,10 +83,13 @@ type RepositoryRule struct {
 }
 
 type RepositoryRules struct {
-	SkippedSourceBranches []string         `yaml:"skip-source-branches,omitempty"`
-	SkipGomod             bool             `yaml:"skip-gomod,omitempty"`
-	SkipTags              bool             `yaml:"skip-tags,omitempty"`
-	Rules                 []RepositoryRule `yaml:"rules"`
+	SkippedSourceBranches []string `yaml:"skip-source-branches,omitempty"`
+	SkipGomod             bool     `yaml:"skip-gomod,omitempty"`
+	SkipTags              bool     `yaml:"skip-tags,omitempty"`
+	// this skips tags in the source repo that are not valid semver tags
+	// e.g. v1.2.3 is valid, but <prefix>/v1.2.3 is not valid.
+	SkipNonSemverTags bool             `yaml:"skip-non-semver-tags,omitempty"`
+	Rules             []RepositoryRule `yaml:"rules"`
 
 	// ls-files patterns like: */BUILD *.ext pkg/foo.go Makefile
 	RecursiveDeletePatterns []string `yaml:"recursive-delete-patterns"`

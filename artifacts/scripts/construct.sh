@@ -37,8 +37,8 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-if [ ! $# -eq 15 ]; then
-    echo "usage: $0 repo src_branch dst_branch dependent_k8s.io_repos required_packages kubernetes_remote subdirectories source_repo_org source_repo_name base_package is_library recursive_delete_pattern skip_tags last_published_upstream_hash git_default_branch"
+if [ ! $# -eq 17 ]; then
+    echo "usage: $0 repo src_branch dst_branch dependent_k8s.io_repos required_packages kubernetes_remote subdirectories source_repo_org source_repo_name base_package is_library recursive_delete_pattern skip_tags skip_non_semver_tags semver_tags_base last_published_upstream_hash git_default_branch"
     exit 1
 fi
 
@@ -72,12 +72,16 @@ IS_LIBRARY="${2}"
 RECURSIVE_DELETE_PATTERN="${3}"
 # Skip syncing tags
 SKIP_TAGS="${4}"
+# Skip tags that do not start with 'v'
+SKIP_NON_SEMVER_TAGS="${5}"
+# Major version to use for building the tag (e.g. v1, v2...)
+SEMVER_TAGS_BASE="${6}"
 # last published upstream hash of this branch
-LAST_PUBLISHED_UPSTREAM_HASH="${5}"
+LAST_PUBLISHED_UPSTREAM_HASH="${7}"
 # name of the main branch. master for k8s.io/kubernetes
-GIT_DEFAULT_BRANCH="${6}"
+GIT_DEFAULT_BRANCH="${8}"
 
-readonly REPO SRC_BRANCH DST_BRANCH DEPS REQUIRED SOURCE_REMOTE SOURCE_REPO_ORG SUBDIRS SOURCE_REPO_NAME BASE_PACKAGE IS_LIBRARY RECURSIVE_DELETE_PATTERN SKIP_TAGS LAST_PUBLISHED_UPSTREAM_HASH GIT_DEFAULT_BRANCH
+readonly REPO SRC_BRANCH DST_BRANCH DEPS REQUIRED SOURCE_REMOTE SOURCE_REPO_ORG SUBDIRS SOURCE_REPO_NAME BASE_PACKAGE IS_LIBRARY RECURSIVE_DELETE_PATTERN SKIP_TAGS SKIP_NON_SEMVER_TAGS SEMVER_TAGS_BASE LAST_PUBLISHED_UPSTREAM_HASH GIT_DEFAULT_BRANCH
 
 SCRIPT_DIR=$(dirname "${BASH_SOURCE}")
 source "${SCRIPT_DIR}"/util.sh
@@ -177,7 +181,9 @@ if [ -z "${SKIP_TAGS}" ]; then
                --push-script ${PUSH_SCRIPT} \
                --dependencies "${DEPS}" \
                --mapping-output-file "../tag-${REPO}-{{.Tag}}-mapping" \
-               --publish-v0-semver \
+               --publish-semver-tags \
+               --skip-non-semver-tags="${SKIP_NON_SEMVER_TAGS}" \
+               --semver-tags-base "${SEMVER_TAGS_BASE}" \
                -alsologtostderr \
                "${EXTRA_ARGS[@]-}"
     if [ "${LAST_HEAD}" != "$(git rev-parse ${LAST_BRANCH})" ]; then

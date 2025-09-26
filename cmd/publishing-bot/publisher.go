@@ -292,6 +292,12 @@ func (p *PublisherMunger) construct() error {
 				p.plog.Infof("synchronizing tags is disabled")
 			}
 
+			skipNonSemverTags := "false"
+			if p.reposRules.SkipNonSemverTags {
+				skipNonSemverTags = "true"
+				p.plog.Infof("synchronizing non-semver tags is disabled")
+			}
+
 			// get old published hash to eventually skip cherry picking
 			var lastPublishedUpstreamHash string
 			bs, err := os.ReadFile(path.Join(p.baseRepoPath, publishedFileName(repoRule.DestinationRepository, branchRule.Name)))
@@ -318,6 +324,8 @@ func (p *PublisherMunger) construct() error {
 				strconv.FormatBool(repoRule.Library),
 				strings.Join(p.reposRules.RecursiveDeletePatterns, " "),
 				skipTags,
+				skipNonSemverTags,
+				repoRule.DestinationTagBase,
 				lastPublishedUpstreamHash,
 				p.config.GitDefaultBranch,
 			)
