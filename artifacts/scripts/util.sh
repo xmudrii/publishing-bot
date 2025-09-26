@@ -171,7 +171,7 @@ sync_repo() {
     local f_mainline_commits=""
     if [ "${new_branch}" = "true" ] && [ "${src_branch}" = "${git_default_branch}" ]; then
         # new master branch
-        filter-branch "${commit_msg_tag}" "${subdirectories}" "${recursive_delete_pattern}" ${src_branch} filtered-branch
+        filter-branch "${commit_msg_tag}" "${subdirectories}" "${recursive_delete_pattern}" "upstream/${src_branch}" filtered-branch
 
         # find commits on the main line (will mostly be merges, but could be non-merges if filter-branch dropped
         # the corresponding fast-forward merge and left the feature branch commits)
