@@ -107,3 +107,4 @@ deploy: init-deploy
 
 test: ## Run go tests
 	go test -v -coverprofile=coverage.out ./...
+.PHONY: test
