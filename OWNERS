@@ -1,11 +1,7 @@
 approvers:
-  - sig-release-leads
-  - release-engineering-approvers
-  - dims
-  - nikhita
+  - clubanderson
+  - embik
+  - mjudeikis
+  - scheeles
   - sttts
-reviewers:
-  - release-engineering-reviewers
-  - akhilerm
-emeritus_approvers:
-  - caesarxuchao
+  - xrstf

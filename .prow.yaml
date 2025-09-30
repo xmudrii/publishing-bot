@@ -1,0 +1,99 @@
+presubmits:
+  - name: pull-publishing-bot-build
+    always_run: true
+    decorate: true
+    # This is a fork of k8s.io/publishing-bot so we keep the same path_alias
+    path_alias: k8s.io/publishing-bot
+    spec:
+      containers:
+      - image: ghcr.io/kcp-dev/infra/build:1.24.5-1
+        command:
+        - make
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 2
+            memory: 4Gi
+  - name: pull-publishing-bot-test
+    always_run: true
+    decorate: true
+    path_alias: k8s.io/publishing-bot
+    spec:
+      containers:
+      - image: ghcr.io/kcp-dev/infra/build:1.24.5-1
+        command:
+        - make
+        - test
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 2
+            memory: 4Gi
+  - name: pull-publishing-bot-validate-rules
+    # TODO: change to true after rules are in place
+    always_run: false
+    decorate: true
+    path_alias: k8s.io/publishing-bot
+    extra_refs:
+    - org: kcp-dev
+      repo: kcp
+      base_ref: main
+    spec:
+      containers:
+      - image: ghcr.io/kcp-dev/infra/build:1.24.5-1
+        env:
+        - name: "GOWORK"
+          value: "off"
+        command:
+        - go
+        args:
+        - run
+        - -mod=mod
+        - k8s.io/publishing-bot/cmd/validate-rules
+        - /home/prow/go/src/k8s.io/kubernetes/staging/publishing/rules.yaml
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 2
+            memory: 4Gi
+  # TODO: Enable this job after publishing-bot is deployed to kcp-dev/kcp
+  # - name: pull-publishing-bot-test-kubernetes-master
+  #   cluster: eks-prow-build-cluster
+  #   always_run: false
+  #   decorate: true
+  #   decoration_config:
+  #     timeout: 3h
+  #   annotations:
+  #     testgrid-dashboards: sig-release-publishing-bot
+  #     testgrid-tab-name: pull-publishing-bot-test-k8s-master
+  #     description: test publishing bot against k/k master
+  #   labels:
+  #     preset-dind-enabled: "true"
+  #   path_alias: k8s.io/publishing-bot
+  #   spec:
+  #     containers:
+  #       - image: gcr.io/k8s-staging-test-infra/kubekins-e2e:v20250925-95b5a2c7a5-master
+  #         command:
+  #           - runner.sh
+  #         args:
+  #           - bash
+  #           - -ce
+  #           - |
+  #             make build-image
+  #             test/k8s-gen-bot-config.sh k8s-bot-config
+  #             test/run-bot-local.sh k8s-bot-config
+  #         securityContext:
+  #           privileged: true
+  #         resources:
+  #           requests:
+  #             cpu: 2
+  #             memory: 2Gi
+  #           limits:
+  #             cpu: 2
+  #             memory: 2Gi
