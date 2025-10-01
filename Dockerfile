@@ -23,8 +23,8 @@ RUN apt-get update \
 ENV GOPATH="/go-workspace"
 ENV GOROOT="/go-workspace/go"
 ENV PATH="${GOPATH}/bin:/go-workspace/go/bin:${PATH}"
-ENV GIT_COMMITTER_NAME="Kubernetes Publisher"
-ENV GIT_COMMITTER_EMAIL="k8s-publishing-bot@users.noreply.github.com"
+ENV GIT_COMMITTER_NAME="kcp CI Bot"
+ENV GIT_COMMITTER_EMAIL="kcp-ci-bot@xrstf.de"
 ENV TERM=xterm
 ENV PS1='\h:\w\$'
 ENV SHELL=/bin/bash
