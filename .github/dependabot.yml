@@ -6,7 +6,6 @@ updates:
       interval: daily
     labels:
       - "area/dependency"
-      - "release-note-none"
       - "ok-to-test"
     open-pull-requests-limit: 10
 
@@ -16,6 +15,5 @@ updates:
       interval: daily
     labels:
       - "area/dependency"
-      - "release-note-none"
       - "ok-to-test"
     open-pull-requests-limit: 10

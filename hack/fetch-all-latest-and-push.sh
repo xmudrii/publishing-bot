@@ -25,7 +25,7 @@ if [ "$#" = 0 ] || [ "$#" -gt 2 ]; then
     exit 1
 fi
 
-FROM="kubernetes"
+FROM="kcp-dev"
 TO="${1}"
 if [ "$#" -ge 2 ]; then
     FROM="${TO}"
@@ -46,8 +46,8 @@ function delete() {
 trap delete EXIT INT
 
 # safety check
-if [ "${TO}" = "kubernetes" ]; then
-    echo "Cannot operate on kubernetes directly" 1>&2
+if [ "${TO}" = "kcp-dev" ]; then
+    echo "Cannot operate on kcp-dev directly" 1>&2
     exit 1
 fi
 
@@ -61,7 +61,7 @@ for (( i=0; i<${repo_count}; i++ )); do
 
     # delete all tags and branches in origin
     rm -f .git/refs/tags/*
-    branches=$(git branch -r | grep "^ *origin" | sed 's,^ *origin/,,' | grep -v HEAD | grep -v '^master' || true)
+    branches=$(git branch -r | grep "^ *origin" | sed 's,^ *origin/,,' | grep -v HEAD | grep -v '^master' | grep -v '^main' || true)
     tags=$(git tag | sed 's,^,refs/tags/,')
     if [ -n "${branches}${tags}" ]; then
         git push --atomic --delete origin ${branches} ${tags}

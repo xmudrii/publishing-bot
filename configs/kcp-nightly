@@ -1,5 +1,5 @@
-DOCKER_REPO = gcr.io/k8s-staging-publishing-bot/k8s-publishing-bot
-NAMESPACE = publishing-bot
+DOCKER_REPO = ghcr.io/kcp-dev/publishing-bot
+NAMESPACE = publishing-bot-nightly
 SCHEDULE = * */4 * * *
 INTERVAL = 14400
 CPU_LIMITS = 2

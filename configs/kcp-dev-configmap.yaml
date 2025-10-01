@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: publisher-config
+data:
+  config: |
+    source-org: kcp-dev
+    source-repo: kcp
+    target-org: kcp-dev
+    rules-file: https://raw.githubusercontent.com/kcp-dev/kcp/refs/heads/main/staging/publishing/rules.yaml
+    git-default-branch: main
+    github-issue: 1
+    dry-run: false
