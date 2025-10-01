@@ -21,7 +21,7 @@ set -o xtrace
 
 # This script expects a config and rules file in the BOT_CONFIG_DIRECTORY which will be used for running
 # the publishing bot
-# The image gcr.io/k8s-staging-publishing-bot/k8s-publishing-bot:latest should be available locally
+# The image ghcr.io/kcp-dev/publishing-bot:latest should be available locally
 # in the docker daemon
 
 BOT_CONFIG_DIRECTORY="${1:-bot-configs}"
@@ -34,7 +34,7 @@ docker run --rm \
     -v local-go-workspace:/go-workspace \
     -v cache:/.cache \
     -v "${PWD}/${BOT_CONFIG_DIRECTORY}":/etc/bot-configs \
-    gcr.io/k8s-staging-publishing-bot/k8s-publishing-bot:latest \
+    ghcr.io/kcp-dev/publishing-bot:latest \
     /init-repo \
         --alsologtostderr \
         --config=/etc/bot-configs/config \
@@ -45,7 +45,7 @@ docker run --rm \
     -v local-go-workspace:/go-workspace \
     -v cache:/.cache \
     -v "${PWD}/${BOT_CONFIG_DIRECTORY}":/etc/bot-configs \
-    gcr.io/k8s-staging-publishing-bot/k8s-publishing-bot:latest \
+    ghcr.io/kcp-dev/publishing-bot:latest \
     /publishing-bot \
         --alsologtostderr \
         --config=/etc/bot-configs/config \

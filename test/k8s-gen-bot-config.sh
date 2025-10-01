@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-# This script generates the config and rules required for testing the master branch of k/k
+# This script generates the config and rules required for testing the main branch of kcp-dev/kcp
 # with publishing bot
 
 BOT_CONFIG_DIRECTORY="${1:-bot-configs}"
@@ -28,7 +28,7 @@ mkdir "${BOT_CONFIG_DIRECTORY}"
 
 ## generate the required config
 # use the content from configmap in the data section
-sed -e '1,/config: |/d' configs/kubernetes-configmap.yaml > "${BOT_CONFIG_DIRECTORY}"/config
+sed -e '1,/config: |/d' configs/kcp-dev-configmap.yaml > "${BOT_CONFIG_DIRECTORY}"/config
 # The additional .tmp extension is used after -i to make it portable across *BSD and GNU.
 #   Ref: https://unix.stackexchange.com/a/92907
 # Also \t is not recognized in non GNU sed implementation. Therefore a tab is used as is.
@@ -41,12 +41,12 @@ sed -i.tmp -e 's/dry-run: false/dry-run: true/g' "${BOT_CONFIG_DIRECTORY}"/confi
 
 ## generate the required rules
 # get the rules file from the k/k repo
-wget https://raw.githubusercontent.com/kubernetes/kubernetes/master/staging/publishing/rules.yaml -O "${BOT_CONFIG_DIRECTORY}"/rules
+wget https://raw.githubusercontent.com/kcp-dev/kcp/main/staging/publishing/rules.yaml -O "${BOT_CONFIG_DIRECTORY}"/rules
 # change permission so that yq container can make changes to the rules file
 chmod 666 "${BOT_CONFIG_DIRECTORY}"/rules
-# only work on master branch
-# yq is used to remove non master branch related rules
+# only work on main branch
+# yq is used to remove non main branch related rules
 docker run \
     --rm \
     -v "${PWD}/${BOT_CONFIG_DIRECTORY}":/workdir \
-    mikefarah/yq:4.32.2 -i 'del( .rules.[].branches.[] | select (.name != "master"))' rules
+    mikefarah/yq:4.32.2 -i 'del( .rules.[].branches.[] | select (.name != "main"))' rules
