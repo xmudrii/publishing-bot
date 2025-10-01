@@ -37,6 +37,7 @@ CPU_LIMITS ?= 2
 CPU_REQUESTS ?= 300m
 MEMORY_REQUESTS ?= 200Mi
 MEMORY_LIMITS ?= 1639Mi
+STORAGE_CLASS ?= ebs-sc
 GOOS ?= linux
 
 build_cmd = mkdir -p _output && GOOS=$(GOOS) CGO_ENABLED=0 go build -o _output/$(1) ./cmd/$(1)
@@ -90,11 +91,11 @@ init-deploy: validate
 	$(KUBECTL) delete -n "$(NAMESPACE)" --ignore-not-found=true replicaset publisher
 	$(KUBECTL) delete -n "$(NAMESPACE)" --ignore-not-found=true pod publisher
 	while $(KUBECTL) get pod -n "$(NAMESPACE)" publisher -a &>/dev/null; do echo -n .; sleep 1; done
-	$(KUBECTL) apply -n "$(NAMESPACE)" -f artifacts/manifests/storage-class.yaml || true
-	$(KUBECTL) get StorageClass ssd
+	$(KUBECTL) get StorageClass "$(STORAGE_CLASS)"
 	$(KUBECTL) apply -n "$(NAMESPACE)" -f $(CONFIG)-configmap.yaml
-	$(KUBECTL) apply -n "$(NAMESPACE)" -f $(CONFIG)-rules-configmap.yaml; \
-	$(KUBECTL) apply -n "$(NAMESPACE)" -f artifacts/manifests/pvc.yaml
+	$(KUBECTL) apply -n "$(NAMESPACE)" -f $(CONFIG)-rules-configmap.yaml
+	{ cat artifacts/manifests/pvc.yaml && sed 's,SC_NAME,$(STORAGE_CLASS),g' artifacts/manifests/pvc.yaml; } | \
+	$(KUBECTL) apply -f -
 .PHONY: init-deploy
 
 run: init-deploy
