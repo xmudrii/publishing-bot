@@ -28,6 +28,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: v1.24.5
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -53,7 +58,10 @@ jobs:
             type=ref,event=tag
             type=sha
 
-      - name: Build and push
+      - name: Build project
+        run: 'make build'
+
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
