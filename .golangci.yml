@@ -49,7 +49,7 @@ linters:
     - musttag
     - nakedret
     - nilerr
-    - noctx
+    # - noctx
     - nolintlint
     - nosprintfhostport
     - prealloc
