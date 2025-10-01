@@ -1,3 +1,13 @@
+> [!IMPORTANT]
+> This is a fork of the [Kubernetes publishing-bot project](https://github.com/kubernetes/publishing-bot).
+>
+> The reason for this fork is that the upstream publishing-bot project has a lot of hardcoded values that are
+> not compatible with kcp. These hardcoded values are project-specific, so the only option was to fork the
+> project and change these values to make it compatible with kcp and its infrastructure.
+>
+> For any inquires, see [our web page](https://docs.kcp.io/kcp/main/#getting-in-touch) for information on how to
+> get in touch with us.
+
 # Kubernetes Publishing Bot
 
 [![sig-release-publishing-bot/build](https://testgrid.k8s.io/q/summary/sig-release-publishing-bot/build/tests_status?style=svg)](https://testgrid.k8s.io/sig-release-publishing-bot#build)
