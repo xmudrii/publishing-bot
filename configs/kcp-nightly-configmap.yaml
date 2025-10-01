@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: publisher-config
+data:
+  config: |
+    source-org: kcp-nightly
+    source-repo: kcp
+    target-org: kcp-nightly
+    rules-file: https://raw.githubusercontent.com/kcp-nightly/kcp/refs/heads/main/staging/publishing/rules.yaml
+    git-default-branch: main
+    github-issue: 1
+    dry-run: false
