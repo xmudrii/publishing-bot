@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -78,7 +79,10 @@ func main() {
 	dependencies := flag.String("dependencies", "", "comma-separated list of repo:branch pairs of dependencies")
 	skipFetch := flag.Bool("skip-fetch", false, "skip fetching tags")
 	mappingOutputFile := flag.String("mapping-output-file", "", "a file name to write the source->dest hash mapping to ({{.Tag}} is substituted with the tag name, {{.Branch}} with the local branch name)")
-	publishSemverTags := flag.Bool("publish-v0-semver", false, "publish v0.x.y tag at destination repo for v1.x.y tag at the source repo")
+	publishV0Semver := flag.Bool("publish-v0-semver", false, "publish v0.x.y tag at destination repo for v1.x.y tag at the source repo")
+	publishSemverTags := flag.Bool("publish-semver-tags", false, "publish vX.Y.Z tag at destination repo for vX.Y.Z tag at the source repo")
+	skipNonSemverTags := flag.Bool("skip-non-semver-tags", false, "skip non-semver tags at the source repo")
+	semverTagsBase := flag.String("semver-tags-base", "v0", "the value to use as vX in vX.Y.Z published at the destination repo")
 
 	flag.Usage = Usage
 	flag.Parse()
@@ -89,6 +93,10 @@ func main() {
 
 	if *sourceBranch == "" {
 		glog.Fatalf("source-branch cannot be empty")
+	}
+
+	if *publishV0Semver && *publishSemverTags {
+		glog.Fatalf("only one of publish-v0-semver and publish-semver-tags can be true")
 	}
 
 	var dependentRepos []string
@@ -188,21 +196,35 @@ func main() {
 	// create or update tags from srcTagCommits as local tags with the given prefix
 	createdTags := []string{}
 	for name, kh := range srcTagCommits {
+		if *skipNonSemverTags {
+			if _, semverErr := semver.Parse(strings.TrimPrefix(name, "v")); semverErr != nil {
+				continue
+			}
+		}
+
 		bName := name
 		if *prefix != "" {
 			bName = *prefix + name[1:] // remove the v
 		}
 
 		var (
-			semverTag        = ""
-			publishSemverTag = false
+			semverTag          = ""
+			publishSemverTag   = false
+			versionPrefixRegex = regexp.MustCompile(`^v\d+\.`)
 		)
 		// if we are publishing semver tags
-		if *publishSemverTags {
+		if *publishV0Semver {
 			// and this is a valid v1... semver tag
 			if _, semverErr := semver.Parse(name[1:]); semverErr == nil && strings.HasPrefix(name, "v1.") {
 				publishSemverTag = true
 				semverTag = "v0." + strings.TrimPrefix(name, "v1.") // replace v1.x.y with v0.x.y
+			}
+		}
+		if *publishSemverTags {
+			// and this is a valid semver tag
+			if _, semverErr := semver.Parse(strings.TrimPrefix(name, "v")); semverErr == nil {
+				publishSemverTag = true
+				semverTag = *semverTagsBase + "." + versionPrefixRegex.ReplaceAllString(name, "")
 			}
 		}
 
@@ -291,7 +313,7 @@ func main() {
 				fmt.Printf("Writing source->dest hash mapping to %q\n", fname)
 				f, err := os.Create(fname)
 				if err != nil {
-					glog.Fatal(f)
+					glog.Fatal(err)
 				}
 				if err := writeKubeCommitMapping(f, sourceCommitsToDstCommits, srcFirstParents); err != nil {
 					glog.Fatal(err)

@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/golang/glog"
@@ -95,7 +96,7 @@ func installGoVersion(v, pth string) error {
 	}
 	defer os.RemoveAll(tmpPath)
 
-	cmd := exec.Command("/bin/bash", "-c", fmt.Sprintf("curl -SLf https://storage.googleapis.com/golang/go%s.linux-amd64.tar.gz | tar -xz --strip 1 -C %s", v, tmpPath))
+	cmd := exec.Command("/bin/bash", "-c", fmt.Sprintf("curl -SLf https://storage.googleapis.com/golang/go%s.%s-%s.tar.gz | tar -xz --strip 1 -C %s", v, runtime.GOOS, runtime.GOARCH, tmpPath))
 	cmd.Dir = tmpPath
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
