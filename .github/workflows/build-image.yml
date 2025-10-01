@@ -3,7 +3,7 @@ name: Build and push image
 on:
   pull_request:
     paths:
-      - .github/workflows/push-image.yml
+      - .github/workflows/build-image.yml
       - Dockerfile
   push:
     branches:
@@ -17,12 +17,17 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ toLower(github.repository) }}
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
