@@ -21,8 +21,8 @@ all: build
 GIT_TAG ?= $(shell git describe --tags --always --dirty)
 
 # Image variables
-IMG_REGISTRY ?= gcr.io/k8s-staging-publishing-bot
-IMG_NAME = k8s-publishing-bot
+IMG_REGISTRY ?= ghcr.io/kcp-dev
+IMG_NAME = publishing-bot
 
 IMG_VERSION ?= v0.0.0-2
 
