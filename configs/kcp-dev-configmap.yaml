@@ -9,5 +9,5 @@ data:
     target-org: kcp-dev
     rules-file: https://raw.githubusercontent.com/kcp-dev/kcp/refs/heads/main/staging/publishing/rules.yaml
     git-default-branch: main
-    github-issue: 1
+    github-issue: 3619
     dry-run: false
