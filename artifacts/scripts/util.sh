@@ -887,52 +887,48 @@ gomod-pseudo-version() {
     local commit_ts
     commit_ts="$(TZ=UTC git show -s --date='format-local:%Y%m%d%H%M%S' --format=%cd HEAD)"
     
-    local tag
-    tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+    local commit_tag
+    commit_tag="$(git describe --tags --exact-match --abbrev=0 2>/dev/null || true)"
     
+    # latest commit has a tag -> tag
+    if [[ -n "${commit_tag}" ]]; then
+        echo "${commit_tag}"
+        return
+    fi
+
+    local latest_tag
+    latest_tag="$(git ls-remote --tags origin 2>/dev/null | awk -F/ '{print $3}' | grep -E '^v[0-9]+(\.[0-9]+)*$' | sort -V | tail -n1)"
+
     # tag does not exist at all -> v0.0.0-<timestamp>-<hash>
-    if [[ -z "${tag:-}" ]]; then
+    if [[ -z "${latest_tag:-}" ]]; then
         echo "v0.0.0-${commit_ts}-${commit_sha}"
         return
     fi
 
-    local head_rev
-    head_rev="$(git rev-parse HEAD)"
-    local tag_rev
-    tag_rev="$(git rev-list -n1 "$tag")"
-    
-    # tag on head -> tag
-    if [[ "$head_rev" == "$tag_rev" ]]; then
-        echo "$tag"
-        return
-    fi
-
-    local current_major
-    current_major="$(grep '^module ' go.mod | sed -E 's|^module .*/(v[0-9]+)$|\1|; t; s|.*|v0|')"
+    local module_major
+    module_major="$(grep '^module ' go.mod | sed -E 's|^module .*/(v[0-9]+)$|\1|; t; s|.*|v0|')"
 
     # head is not a tag ->
     #   - the latest available tag is vX.Y.Z      -> vX.Y.(Z+1)-0.<timestamp>-<hash>
     #   - the latest available tag is vX.Y.Z-PR   -> vX.Y.Z-PR.0.<timestamp>-<hash>
-    if [[ "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-.+)?$ ]]; then
+    if [[ "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-.+)?$ ]]; then
         local major="${BASH_REMATCH[1]}"
         local minor="${BASH_REMATCH[2]}"
         local patch="${BASH_REMATCH[3]}"
         local pre="${BASH_REMATCH[4]}"
 
-        # if go.mod major matches the latest tag major
-        if [[ "$current_major" == "v$major" ]]; then
+        if [[ "$module_major" == "v$major" ]]; then
             if [[ -z "${pre}" ]]; then
                 echo "v${major}.${minor}.$((patch+1))-0.${commit_ts}-${commit_sha}"
             else
-                echo "${tag}.0.${commit_ts}-${commit_sha}"
+                echo "${latest_tag}.0.${commit_ts}-${commit_sha}"
             fi
-        # if go.mod major does not match the latest tag major, then logic similar to v0.0.0 is used
         else
-            echo "${current_major}.0.0-${commit_ts}-${commit_sha}"
+            echo "${latest_tag}+incompatible"
         fi
     else
         # the latest tag is not semver -> ignore it
-        echo "${current_major}.0.0-${commit_ts}-${commit_sha}"
+        echo "v0.0.0-${commit_ts}-${commit_sha}"
     fi
 }
 
