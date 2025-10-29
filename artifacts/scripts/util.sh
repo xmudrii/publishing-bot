@@ -881,7 +881,59 @@ update-deps-in-gomod() {
 }
 
 gomod-pseudo-version() {
-    TZ=GMT git show -q --pretty='format:v0.0.0-%cd-%h' --date='format-local:%Y%m%d%H%M%S' --abbrev=12
+    local commit_sha
+    commit_sha="$(git rev-parse --short=12 HEAD)"
+    
+    local commit_ts
+    commit_ts="$(TZ=UTC git show -s --date='format-local:%Y%m%d%H%M%S' --format=%cd HEAD)"
+    
+    local tag
+    tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+    
+    # tag does not exist at all -> v0.0.0-<timestamp>-<hash>
+    if [[ -z "${tag:-}" ]]; then
+        echo "v0.0.0-${commit_ts}-${commit_sha}"
+        return
+    fi
+
+    local head_rev
+    head_rev="$(git rev-parse HEAD)"
+    local tag_rev
+    tag_rev="$(git rev-list -n1 "$tag")"
+    
+    # tag on head -> tag
+    if [[ "$head_rev" == "$tag_rev" ]]; then
+        echo "$tag"
+        return
+    fi
+
+    local current_major
+    current_major="$(grep '^module ' go.mod | sed -E 's|^module .*/(v[0-9]+)$|\1|; t; s|.*|v0|')"
+
+    # head is not a tag ->
+    #   - the latest available tag is vX.Y.Z      -> vX.Y.(Z+1)-0.<timestamp>-<hash>
+    #   - the latest available tag is vX.Y.Z-PR   -> vX.Y.Z-PR.0.<timestamp>-<hash>
+    if [[ "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-.+)?$ ]]; then
+        local major="${BASH_REMATCH[1]}"
+        local minor="${BASH_REMATCH[2]}"
+        local patch="${BASH_REMATCH[3]}"
+        local pre="${BASH_REMATCH[4]}"
+
+        # if go.mod major matches the latest tag major
+        if [[ "$current_major" == "v$major" ]]; then
+            if [[ -z "${pre}" ]]; then
+                echo "v${major}.${minor}.$((patch+1))-0.${commit_ts}-${commit_sha}"
+            else
+                echo "${tag}.0.${commit_ts}-${commit_sha}"
+            fi
+        # if go.mod major does not match the latest tag major, then logic similar to v0.0.0 is used
+        else
+            echo "${current_major}.0.0-${commit_ts}-${commit_sha}"
+        fi
+    else
+        # the latest tag is not semver -> ignore it
+        echo "${current_major}.0.0-${commit_ts}-${commit_sha}"
+    fi
 }
 
 # checkout the dependencies to the versions corresponding to the kube commit of HEAD
