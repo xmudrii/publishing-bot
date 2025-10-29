@@ -827,9 +827,16 @@ update-deps-in-gomod() {
     for (( i=0; i<${dep_count}; i++ )); do
         local dep="${deps_array[i]%%:*}"
         local dep_commit=$(cd ../${dep}; gomod-pseudo-version)
-        echo "Updating ${base_package}/${dep} to point to ${dep_commit}"
-        GO111MODULE=on go mod edit -fmt -require "${base_package}/${dep}@${dep_commit}"
-        GO111MODULE=on go mod edit -fmt -replace "${base_package}/${dep}=${base_package}/${dep}@${dep_commit}"
+        local mod_major=$(cd ../${dep}; gomod-module-major)
+        local go_pkg="${base_package}/${dep}"
+
+        if [ "${mod_major}" != "v0" ] && [ "${mod_major}" != "v1" ]; then
+            go_pkg="${go_pkg}/${mod_major}"
+        fi
+
+        echo "Updating ${go_pkg} to point to ${dep_commit}"
+        GO111MODULE=on go mod edit -fmt -require "${go_pkg}@${dep_commit}"
+        GO111MODULE=on go mod edit -fmt -replace "${go_pkg}=${go_pkg}@${dep_commit}"
     done
 
     GO111MODULE=on go mod edit -json | jq -r '.Replace[]? | select(.New.Path | startswith("../")) | "-dropreplace \(.Old.Path)"' | GO111MODULE=on xargs -L 100 go mod edit -fmt
@@ -880,6 +887,10 @@ update-deps-in-gomod() {
     ensure-clean-working-dir
 }
 
+gomod-module-major() {
+    grep '^module ' go.mod | sed -E 's|^module .*/(v[0-9]+)$|\1|; t; s|.*|v0|'
+}
+
 gomod-pseudo-version() {
     local commit_sha
     commit_sha="$(git rev-parse --short=12 HEAD)"
@@ -906,7 +917,7 @@ gomod-pseudo-version() {
     fi
 
     local module_major
-    module_major="$(grep '^module ' go.mod | sed -E 's|^module .*/(v[0-9]+)$|\1|; t; s|.*|v0|')"
+    module_major="$(gomod-module-major)"
 
     # head is not a tag ->
     #   - the latest available tag is vX.Y.Z      -> vX.Y.(Z+1)-0.<timestamp>-<hash>
