@@ -888,7 +888,7 @@ gomod-pseudo-version() {
     commit_ts="$(TZ=UTC git show -s --date='format-local:%Y%m%d%H%M%S' --format=%cd HEAD)"
     
     local commit_tag
-    commit_tag="$(git describe --tags --exact-match --abbrev=0 2>/dev/null || true)"
+    commit_tag="$( (git tag --points-at HEAD 2>/dev/null || true) | grep 'origin\/v' | sed 's|^origin/||' | sort -V | tail -n1)"
     
     # latest commit has a tag -> tag
     if [[ -n "${commit_tag}" ]]; then
@@ -897,7 +897,7 @@ gomod-pseudo-version() {
     fi
 
     local latest_tag
-    latest_tag="$(git ls-remote --tags origin 2>/dev/null | awk -F/ '{print $3}' | grep -E '^v[0-9]+(\.[0-9]+)*$' | sort -V | tail -n1)"
+    latest_tag="$( (git ls-remote --tags origin 2>/dev/null || true) | awk -F/ '{print $3}' | grep -v '\^{}' | grep 'v' | sort -V | tail -n1)"
 
     # tag does not exist at all -> v0.0.0-<timestamp>-<hash>
     if [[ -z "${latest_tag:-}" ]]; then
