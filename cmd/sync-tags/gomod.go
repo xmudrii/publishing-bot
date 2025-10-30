@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blang/semver/v4"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
@@ -61,6 +62,8 @@ func updateGomodWithTaggedDependencies(tag string, depsRepo []string, semverTag 
 		rev := commit.String()
 		pseudoVersionOrTag := fmt.Sprintf("v0.0.0-%s-%s", commitTime.UTC().Format("20060102150405"), rev[:12])
 
+		// TODO(xmudrii): We are configured to always hit this case because we have --publish-semver-tags set to true,
+		// so pseudo-version is not important. At some point, it would be nice to fix this.
 		if semverTag {
 			pseudoVersionOrTag = tag
 		}
@@ -153,7 +156,16 @@ type ModuleInfo struct {
 }
 
 func packageDepToGoModCache(depPath, depPkg, commit, pseudoVersionOrTag string, commitTime time.Time) error {
+	pseudoSemver, err := semver.Parse(strings.TrimPrefix(pseudoVersionOrTag, "v"))
+	if err != nil {
+		return fmt.Errorf("error parsing pseudo-version: %w", err)
+	}
+
 	cacheDir := fmt.Sprintf("%s/pkg/mod/cache/download/%s/@v", os.Getenv("GOPATH"), depPkg)
+	if pseudoSemver.Major >= 2 {
+		cacheDir = fmt.Sprintf("%s/v%d", cacheDir, pseudoSemver.Major)
+	}
+
 	goModFile := fmt.Sprintf("%s/%s.mod", cacheDir, pseudoVersionOrTag)
 
 	if _, err := os.Stat(goModFile); err == nil {

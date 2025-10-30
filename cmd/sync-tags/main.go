@@ -256,7 +256,20 @@ func main() {
 				glog.Fatalf("Failed to get tag %s: %v", bName, err)
 			}
 			rev := commit.String()
+
+			pseudoSemver, err := semver.Parse(strings.TrimPrefix(name, "v"))
+			if err != nil {
+				glog.Fatalf("error parsing pseudo-version: %v", err)
+			}
+
 			pseudoVersion := fmt.Sprintf("v0.0.0-%s-%s", commitTime.UTC().Format("20060102150405"), rev[:12])
+			if pseudoSemver.Major >= 2 {
+				if len(pseudoSemver.Pre) == 0 {
+					pseudoVersion = fmt.Sprintf("v%d.%d.%d-0.%s-%s", pseudoSemver.Major, pseudoSemver.Minor, pseudoSemver.Patch+1, commitTime.UTC().Format("20060102150405"), rev[:12])
+				} else {
+					pseudoVersion = fmt.Sprintf("v%s.0.%s-%s", strings.TrimPrefix(name, "v"), commitTime.UTC().Format("20060102150405"), rev[:12])
+				}
+			}
 
 			fmt.Printf("Clearing cache for local tag %s.\n", pseudoVersion)
 			if err := cleanCacheForTag(pseudoVersion); err != nil {
@@ -353,9 +366,9 @@ func main() {
 		if publishSemverTag {
 			fmt.Printf("Tagging %v as %q.\n", bh, semverTag)
 			err = createAnnotatedTag(bh, semverTag, tag.Tagger.When, dedent.Dedent(fmt.Sprintf(`
-			Kubernetes release %s
+			kcp release %s
 
-			Based on https://github.com/kubernetes/kubernetes/releases/tag/%s
+			Based on https://github.com/kcp-dev/kcp/releases/tag/%s
 			`, name, name)))
 			if err != nil {
 				glog.Fatalf("Failed to create tag %q: %v", semverTag, err)
@@ -366,9 +379,9 @@ func main() {
 		// create non-semver prefixed annotated tag
 		fmt.Printf("Tagging %v as %q.\n", bh, bName)
 		err = createAnnotatedTag(bh, bName, tag.Tagger.When, dedent.Dedent(fmt.Sprintf(`
-				Kubernetes release %s
+				kcp release %s
 
-				Based on https://github.com/kubernetes/kubernetes/releases/tag/%s
+				Based on https://github.com/kcp-dev/kcp/releases/tag/%s
 				`, name, name)))
 		if err != nil {
 			glog.Fatalf("Failed to create tag %q: %v", bName, err)
@@ -567,7 +580,16 @@ func cleanCacheForTag(tag string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get package at %s: %w", dir, err)
 	}
+
+	pseudoSemver, err := semver.Parse(strings.TrimPrefix(tag, "v"))
+	if err != nil {
+		return fmt.Errorf("error parsing pseudo-version: %w", err)
+	}
+
 	cacheDir := fmt.Sprintf("%s/pkg/mod/cache/download/%s/@v", os.Getenv("GOPATH"), pkg)
+	if pseudoSemver.Major >= 2 {
+		cacheDir = fmt.Sprintf("%s/v%d", cacheDir, pseudoSemver.Major)
+	}
 
 	goModFile := fmt.Sprintf("%s/%s.mod", cacheDir, tag)
 	if _, err := os.Stat(goModFile); err == nil {
