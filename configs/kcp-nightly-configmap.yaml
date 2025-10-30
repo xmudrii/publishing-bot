@@ -7,6 +7,7 @@ data:
     source-org: kcp-nightly
     source-repo: kcp
     target-org: kcp-nightly
+    base-package: github.com/kcp-dev
     rules-file: https://raw.githubusercontent.com/kcp-nightly/kcp/refs/heads/main/staging/publishing/rules.yaml
     git-default-branch: main
     github-issue: 1
