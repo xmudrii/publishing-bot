@@ -887,6 +887,8 @@ update-deps-in-gomod() {
     ensure-clean-working-dir
 }
 
+# Reads the module major version from go.mod.
+# If no major version suffix is found, returns "v0".
 gomod-module-major() {
     grep '^module ' go.mod | sed -E 's|^module .*/(v[0-9]+)$|\1|; t; s|.*|v0|'
 }
@@ -898,47 +900,68 @@ gomod-pseudo-version() {
     local commit_ts
     commit_ts="$(TZ=UTC git show -s --date='format-local:%Y%m%d%H%M%S' --format=%cd HEAD)"
     
+    # Get tag pointing at HEAD (the current commit), if any
     local commit_tag
-    commit_tag="$( (git tag --points-at HEAD 2>/dev/null || true) | grep 'origin\/v' | sed 's|^origin/||' | sort -V | tail -n1)"
-    
-    # latest commit has a tag -> tag
-    if [[ -n "${commit_tag}" ]]; then
+    commit_tag="$(git tag --points-at HEAD 2>/dev/null || true)"
+
+    # We assume that tags will always be valid semver tags starting with 'v'.
+    # Repositories cloned by the publishing-bot always have two remotes:
+    #   - origin: the published repository (e.g. github.com/kcp-dev/apimachinery)
+    #   - upstream: the local source repository (e.g. ../kcp)
+    # We only consider tags from the published repository (origin).
+    # Technically, we should never ever hit this case. That's because tags are synced
+    # only after the initial publishing is done. We might eventually hit this case if
+    # there are two different tags/versions on the same commit.
+    if [[ -n "${commit_tag:-}" ]]; then
+        commit_tag=$(echo "${commit_tag}" | grep 'origin\/v' | sed 's|^origin/||' | sort -V | tail -n1)
         echo "${commit_tag}"
         return
     fi
-
+  
+    # Get the latest tag from the published repository (origin).
+    # This tag does not point at HEAD, otherwise the previous case would handle it.
     local latest_tag
-    latest_tag="$( (git ls-remote --tags origin 2>/dev/null || true) | awk -F/ '{print $3}' | grep -v '\^{}' | grep 'v' | sort -V | tail -n1)"
+    latest_tag="$(git ls-remote --tags origin 2>/dev/null || true)"
 
-    # tag does not exist at all -> v0.0.0-<timestamp>-<hash>
     if [[ -z "${latest_tag:-}" ]]; then
+        # No tag exists, generate and return a pseudo-version string.
         echo "v0.0.0-${commit_ts}-${commit_sha}"
         return
     fi
 
+    # "git ls-remote" returns a bit more data than needed, so we parse it take valid semver tag.
+    latest_tag="$(echo "${latest_tag}" | awk -F/ '{print $3}' | grep -v '\^{}' | grep 'v' | sort -V | tail -n1)"
+
+    # This returns the module major version as defined in go.mod.
     local module_major
     module_major="$(gomod-module-major)"
 
-    # head is not a tag ->
-    #   - the latest available tag is vX.Y.Z      -> vX.Y.(Z+1)-0.<timestamp>-<hash>
-    #   - the latest available tag is vX.Y.Z-PR   -> vX.Y.Z-PR.0.<timestamp>-<hash>
+    # Parse the latest tag and determine the semver elements.
     if [[ "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-.+)?$ ]]; then
         local major="${BASH_REMATCH[1]}"
         local minor="${BASH_REMATCH[2]}"
         local patch="${BASH_REMATCH[3]}"
         local pre="${BASH_REMATCH[4]}"
 
+        # If the module's major version matches the latest tag's major version.
         if [[ "$module_major" == "v$major" ]]; then
             if [[ -z "${pre}" ]]; then
+                # Stable tags are handled by incrementing the patch version
+                # and appending the pseudo-version suffix.
                 echo "v${major}.${minor}.$((patch+1))-0.${commit_ts}-${commit_sha}"
             else
+                # Pre-release tags are handled by appending the pseudo-version suffix
+                # to the pre-release tag.
                 echo "${latest_tag}.0.${commit_ts}-${commit_sha}"
             fi
         else
+            # Otherwise, Go handles this in a little strange way. It takes the latest tag
+            # and appends "+incompatible" to it.
             echo "${latest_tag}+incompatible"
         fi
     else
-        # the latest tag is not semver -> ignore it
+        # If we hit this case, the latest tag is not a valid semver tag.
+        # We just generate v0.0.0 pseudo-version string instead.
         echo "v0.0.0-${commit_ts}-${commit_sha}"
     fi
 }
@@ -986,7 +1009,12 @@ checkout-deps-to-kube-commit() {
             git checkout -q "${dep_commit}"
 
             local pseudo_version=$(gomod-pseudo-version)
+            local mod_major=$(gomod-module-major)
             local cache_dir="${GOPATH}/pkg/mod/cache/download/${base_package}/${dep}/@v"
+            if [ "${mod_major}" != "v0" ] && [ "${mod_major}" != "v1" ]; then
+                cache_dir="${GOPATH}/pkg/mod/cache/download/${base_package}/${dep}/@v/${mod_major}"
+            fi
+            
             if [ -f "${cache_dir}/list" ] && grep -q "${pseudo_version}" "${cache_dir}/list"; then
             	echo "Pseudo version ${pseudo_version} is already packaged up."
             else
