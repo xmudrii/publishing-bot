@@ -24,7 +24,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/golang/glog"
 	"golang.org/x/mod/modfile"
 	modzip "golang.org/x/mod/zip"
@@ -62,8 +64,16 @@ func main() {
 		glog.Fatalf("pseudo-version cannot be empty")
 	}
 
+	pseudoSemver, err := semver.Parse(strings.TrimPrefix(*pseudoVersion, "v"))
+	if err != nil {
+		glog.Fatalf("error parsing pseudo-version: %v", err)
+	}
+
 	packagePath := fmt.Sprintf("%s/src/%s", os.Getenv("GOPATH"), *packageName)
 	cacheDir := fmt.Sprintf("%s/pkg/mod/cache/download/%s/@v", os.Getenv("GOPATH"), *packageName)
+	if pseudoSemver.Major >= 2 {
+		cacheDir = fmt.Sprintf("%s/v%d", cacheDir, pseudoSemver.Major)
+	}
 
 	moduleFile, err := getModuleFile(packagePath, *pseudoVersion)
 	if err != nil {
