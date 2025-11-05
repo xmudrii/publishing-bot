@@ -900,67 +900,10 @@ gomod-pseudo-version() {
     local commit_ts
     commit_ts="$(TZ=UTC git show -s --date='format-local:%Y%m%d%H%M%S' --format=%cd HEAD)"
     
-    # Get tag pointing at HEAD (the current commit), if any
-    local commit_tag
-    commit_tag="$(git tag --points-at HEAD 2>/dev/null || true)"
-
-    # We assume that tags will always be valid semver tags starting with 'v'.
-    # Repositories cloned by the publishing-bot always have two remotes:
-    #   - origin: the published repository (e.g. github.com/kcp-dev/apimachinery)
-    #   - upstream: the local source repository (e.g. ../kcp)
-    # We only consider tags from the published repository (origin).
-    if [[ -n "${commit_tag:-}" ]]; then
-        commit_tag=$(echo "${commit_tag}" | grep -E 'v|origin\/v' | sed 's|^origin/||' | sort -V | tail -n1)
-        echo "${commit_tag}"
-        return
-    fi
-  
-    # Get the latest tag from the published repository (origin).
-    # This tag does not point at HEAD, otherwise the previous case would handle it.
-    local latest_tag
-    latest_tag="$(git ls-remote --tags origin 2>/dev/null || true)"
-
-    if [[ -z "${latest_tag:-}" ]]; then
-        # No tag exists, generate and return a pseudo-version string.
-        echo "v0.0.0-${commit_ts}-${commit_sha}"
-        return
-    fi
-
-    # "git ls-remote" returns a bit more data than needed, so we parse it take valid semver tag.
-    latest_tag="$(echo "${latest_tag}" | awk -F/ '{print $3}' | grep -v '\^{}' | grep 'v' | sort -V | tail -n1)"
-
-    # This returns the module major version as defined in go.mod.
     local module_major
     module_major="$(gomod-module-major)"
 
-    # Parse the latest tag and determine the semver elements.
-    if [[ "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-.+)?$ ]]; then
-        local major="${BASH_REMATCH[1]}"
-        local minor="${BASH_REMATCH[2]}"
-        local patch="${BASH_REMATCH[3]}"
-        local pre="${BASH_REMATCH[4]}"
-
-        # If the module's major version matches the latest tag's major version.
-        if [[ "$module_major" == "v$major" ]]; then
-            if [[ -z "${pre}" ]]; then
-                # Stable tags are handled by incrementing the patch version
-                # and appending the pseudo-version suffix.
-                echo "v${major}.${minor}.$((patch+1))-0.${commit_ts}-${commit_sha}"
-            else
-                # Pre-release tags are handled by appending the pseudo-version suffix
-                # to the pre-release tag.
-                echo "${latest_tag}.0.${commit_ts}-${commit_sha}"
-            fi
-        else
-            # Otherwise, Go handles this in a little strange way. It takes the latest tag
-            # and appends "+incompatible" to it.
-            echo "${latest_tag}+incompatible"
-        fi
-    else
-        # If we hit this case, the latest tag is not a valid semver tag.
-        # We just generate v0.0.0 pseudo-version string instead.
-        echo "v0.0.0-${commit_ts}-${commit_sha}"
-    fi
+    echo "${module_major}.0.0-${commit_ts}-${commit_sha}"
 }
 
 # checkout the dependencies to the versions corresponding to the kube commit of HEAD
