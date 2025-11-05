@@ -909,11 +909,8 @@ gomod-pseudo-version() {
     #   - origin: the published repository (e.g. github.com/kcp-dev/apimachinery)
     #   - upstream: the local source repository (e.g. ../kcp)
     # We only consider tags from the published repository (origin).
-    # Technically, we should never ever hit this case. That's because tags are synced
-    # only after the initial publishing is done. We might eventually hit this case if
-    # there are two different tags/versions on the same commit.
     if [[ -n "${commit_tag:-}" ]]; then
-        commit_tag=$(echo "${commit_tag}" | grep 'origin\/v' | sed 's|^origin/||' | sort -V | tail -n1)
+        commit_tag=$(echo "${commit_tag}" | grep -E 'v|origin\/v' | sed 's|^origin/||' | sort -V | tail -n1)
         echo "${commit_tag}"
         return
     fi
