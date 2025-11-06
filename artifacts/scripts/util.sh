@@ -952,7 +952,7 @@ checkout-deps-to-kube-commit() {
             local mod_major=$(gomod-module-major)
             local cache_dir="${GOPATH}/pkg/mod/cache/download/${base_package}/${dep}/@v"
             if [ "${mod_major}" != "v0" ] && [ "${mod_major}" != "v1" ]; then
-                cache_dir="${GOPATH}/pkg/mod/cache/download/${base_package}/${dep}/@v/${mod_major}"
+                cache_dir="${GOPATH}/pkg/mod/cache/download/${base_package}/${dep}/${mod_major}/@v"
             fi
             
             if [ -f "${cache_dir}/list" ] && grep -q "${pseudo_version}" "${cache_dir}/list"; then

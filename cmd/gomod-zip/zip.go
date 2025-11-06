@@ -72,7 +72,7 @@ func main() {
 	packagePath := fmt.Sprintf("%s/src/%s", os.Getenv("GOPATH"), *packageName)
 	cacheDir := fmt.Sprintf("%s/pkg/mod/cache/download/%s/@v", os.Getenv("GOPATH"), *packageName)
 	if pseudoSemver.Major >= 2 {
-		cacheDir = fmt.Sprintf("%s/v%d", cacheDir, pseudoSemver.Major)
+		cacheDir = fmt.Sprintf("%s/pkg/mod/cache/download/%s/v%d/@v", os.Getenv("GOPATH"), *packageName, pseudoSemver.Major)
 	}
 
 	moduleFile, err := getModuleFile(packagePath, *pseudoVersion)
