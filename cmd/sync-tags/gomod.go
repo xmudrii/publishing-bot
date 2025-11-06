@@ -214,7 +214,7 @@ func packageDepToGoModCache(depPath, depPkg, commit, pseudoVersionOrTag string, 
 
 	cacheDir := fmt.Sprintf("%s/pkg/mod/cache/download/%s/@v", os.Getenv("GOPATH"), depPkg)
 	if pseudoSemver.Major >= 2 {
-		cacheDir = fmt.Sprintf("%s/v%d", cacheDir, pseudoSemver.Major)
+		cacheDir = fmt.Sprintf("%s/pkg/mod/cache/download/%s/v%d/@v", os.Getenv("GOPATH"), depPkg, pseudoSemver.Major)
 	}
 
 	goModFile := fmt.Sprintf("%s/%s.mod", cacheDir, pseudoVersionOrTag)

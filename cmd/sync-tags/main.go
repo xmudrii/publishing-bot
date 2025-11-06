@@ -589,7 +589,7 @@ func cleanCacheForTag(tag string) error {
 
 	cacheDir := fmt.Sprintf("%s/pkg/mod/cache/download/%s/@v", os.Getenv("GOPATH"), pkg)
 	if pseudoSemver.Major >= 2 {
-		cacheDir = fmt.Sprintf("%s/v%d", cacheDir, pseudoSemver.Major)
+		cacheDir = fmt.Sprintf("%s/pkg/mod/cache/download/%s/v%d/@v", os.Getenv("GOPATH"), pkg, pseudoSemver.Major)
 	}
 
 	goModFile := fmt.Sprintf("%s/%s.mod", cacheDir, tag)
