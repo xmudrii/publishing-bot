@@ -121,6 +121,10 @@ func updateGomodWithTaggedDependencies(searchTag string, depsRepo []string, semv
 			return changed, fmt.Errorf("failed to package %s dependency: %w", depPkg, err)
 		}
 
+		if moduleMajor >= 2 {
+			depPkg = fmt.Sprintf("%s/v%d", depPkg, moduleMajor)
+		}
+
 		requireCommand := exec.Command("go", "mod", "edit", "-fmt", "-require", fmt.Sprintf("%s@%s", depPkg, pseudoVersionOrTag))
 		requireCommand.Env = append(os.Environ(), "GO111MODULE=on")
 		requireCommand.Stdout = os.Stdout
