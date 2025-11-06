@@ -43,6 +43,8 @@ func updateGomodWithTaggedDependencies(searchTag string, depsRepo []string, semv
 		return changed, err
 	}
 
+	fmt.Println("Found the following dependencies to update:", depPackages)
+
 	for _, dep := range depsRepo {
 		depPath := filepath.Join("..", dep)
 		dr, err := gogit.PlainOpen(depPath)
