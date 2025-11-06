@@ -257,19 +257,24 @@ func main() {
 			}
 			rev := commit.String()
 
-			pseudoSemver, err := semver.Parse(strings.TrimPrefix(name, "v"))
+			// The Go mod cache is built upon the target tag name,
+			// not the source tag name, so we use generated tag name here.
+			// Only if it doesn't exist for some reason, we fall back to
+			// the original tag name.
+			pseudoSemverString := strings.TrimPrefix(semverTag, "v")
+			if pseudoSemverString == "" {
+				pseudoSemverString = strings.TrimPrefix(name, "v")
+			}
+			pseudoSemver, err := semver.Parse(pseudoSemverString)
 			if err != nil {
 				glog.Fatalf("error parsing pseudo-version: %v", err)
 			}
-
-			pseudoVersion := fmt.Sprintf("v0.0.0-%s-%s", commitTime.UTC().Format("20060102150405"), rev[:12])
-			if pseudoSemver.Major >= 2 {
-				if len(pseudoSemver.Pre) == 0 {
-					pseudoVersion = fmt.Sprintf("v%d.%d.%d-0.%s-%s", pseudoSemver.Major, pseudoSemver.Minor, pseudoSemver.Patch+1, commitTime.UTC().Format("20060102150405"), rev[:12])
-				} else {
-					pseudoVersion = fmt.Sprintf("v%s.0.%s-%s", strings.TrimPrefix(name, "v"), commitTime.UTC().Format("20060102150405"), rev[:12])
-				}
+			// Both v0 and v1 use v0 in pseudo-version.
+			moduleMajor := pseudoSemver.Major
+			if moduleMajor == 1 {
+				moduleMajor = 0
 			}
+			pseudoVersion := fmt.Sprintf("v%d.0.0-%s-%s", moduleMajor, commitTime.UTC().Format("20060102150405"), rev[:12])
 
 			fmt.Printf("Clearing cache for local tag %s.\n", pseudoVersion)
 			if err := cleanCacheForTag(pseudoVersion); err != nil {
@@ -346,11 +351,7 @@ func main() {
 			var changed bool
 			_, err = os.Stat("go.mod")
 			if err == nil {
-				if publishSemverTag {
-					changed = updateGoMod(semverTag, dependentRepos, true)
-				} else {
-					changed = updateGoMod(bName, dependentRepos, false)
-				}
+				changed = updateGoMod(bName, dependentRepos, publishSemverTag)
 			}
 
 			if changed {
@@ -538,11 +539,11 @@ func checkoutBranchTagCommit(r *gogit.Repository, bh plumbing.Hash, dependentRep
 	return wt
 }
 
-func updateGoMod(tag string, dependentRepos []string, publishSemverTags bool) bool {
-	fmt.Printf("Updating go.mod and go.sum to point to %s tag.\n", tag)
-	changed, err := updateGomodWithTaggedDependencies(tag, dependentRepos, publishSemverTags)
+func updateGoMod(searchTag string, dependentRepos []string, publishSemverTags bool) bool {
+	fmt.Printf("Updating go.mod and go.sum to point to %s tag.\n", searchTag)
+	changed, err := updateGomodWithTaggedDependencies(searchTag, dependentRepos, publishSemverTags)
 	if err != nil {
-		glog.Fatalf("Failed to update go.mod and go.sum for tag %s: %v", tag, err)
+		glog.Fatalf("Failed to update go.mod and go.sum for tag %s: %v", searchTag, err)
 	}
 	return changed
 }

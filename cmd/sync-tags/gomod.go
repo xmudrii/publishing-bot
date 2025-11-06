@@ -34,7 +34,7 @@ import (
 
 // updateGomodWithTaggedDependencies gets the dependencies at the given tag and fills go.mod and go.sum.
 // If anything is changed, it commits the changes. Returns true if go.mod changed.
-func updateGomodWithTaggedDependencies(tag string, depsRepo []string, semverTag bool) (bool, error) {
+func updateGomodWithTaggedDependencies(searchTag string, depsRepo []string, semverTag bool) (bool, error) {
 	found := map[string]bool{}
 	changed := false
 
@@ -55,12 +55,59 @@ func updateGomodWithTaggedDependencies(tag string, depsRepo []string, semverTag 
 			return changed, fmt.Errorf("failed to get package at %s: %w", depPath, err)
 		}
 
-		commit, commitTime, err := localOrPublishedTaggedCommitHashAndTime(dr, tag)
+		commit, commitTime, err := localOrPublishedTaggedCommitHashAndTime(dr, searchTag)
 		if err != nil {
-			return changed, fmt.Errorf("failed to get tag %s for %q: %w", tag, depPkg, err)
+			return changed, fmt.Errorf("failed to get tag %s for %q: %w", searchTag, depPkg, err)
 		}
 		rev := commit.String()
-		pseudoVersionOrTag := fmt.Sprintf("v0.0.0-%s-%s", commitTime.UTC().Format("20060102150405"), rev[:12])
+
+		moduleMajor := uint64(0)
+		tag := ""
+		if semverTag {
+			iter, err := dr.Tags()
+			if err != nil {
+				return changed, fmt.Errorf("failed to get tags for repo %s: %w", dep, err)
+			}
+
+			var tags []string
+			err = iter.ForEach(func(ref *plumbing.Reference) error {
+				if tagObj, err := dr.TagObject(ref.Hash()); err == nil {
+					if tagObj.Target == commit && strings.HasPrefix(strings.TrimPrefix(ref.Name().Short(), "origin/"), "v") {
+						tags = append(tags, ref.Name().Short())
+					}
+				}
+
+				return nil
+			})
+			if err != nil {
+				return changed, fmt.Errorf("failed to find semver tag for given search tag: %w", err)
+			}
+			iter.Close()
+
+			if len(tags) == 0 {
+				return changed, fmt.Errorf("no semver tag found for given search tag %s", searchTag)
+			}
+
+			// pick the highest semver tag
+			semvers := make([]semver.Version, 0, len(tags))
+			for _, t := range tags {
+				sv, err := semver.Parse(strings.TrimPrefix(t, "v"))
+				if err != nil {
+					return changed, fmt.Errorf("failed to parse semver tag %s: %w", t, err)
+				}
+				semvers = append(semvers, sv)
+			}
+			semver.Sort(semvers)
+
+			latestSemver := semvers[len(semvers)-1]
+			moduleMajor = latestSemver.Major
+			if moduleMajor == 1 {
+				moduleMajor = 0
+			}
+			tag = fmt.Sprintf("v%s", latestSemver.String())
+		}
+
+		pseudoVersionOrTag := fmt.Sprintf("v%d.0.0-%s-%s", moduleMajor, commitTime.UTC().Format("20060102150405"), rev[:12])
 
 		// TODO(xmudrii): We are configured to always hit this case because we have --publish-semver-tags set to true,
 		// so pseudo-version is not important. At some point, it would be nice to fix this.
@@ -126,7 +173,7 @@ func updateGomodWithTaggedDependencies(tag string, depsRepo []string, semverTag 
 	if err := tidyCommand.Run(); err != nil {
 		return changed, fmt.Errorf("unable to run go mod tidy: %w", err)
 	}
-	fmt.Printf("Completed running go mod tidy for %s.\n", tag)
+	fmt.Printf("Completed running go mod tidy for %s.\n", searchTag)
 
 	return changed, nil
 }
