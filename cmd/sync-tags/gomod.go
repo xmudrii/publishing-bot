@@ -43,8 +43,6 @@ func updateGomodWithTaggedDependencies(searchTag string, depsRepo []string, semv
 		return changed, err
 	}
 
-	fmt.Println("Found the following dependencies to update:", depPackages)
-
 	for _, dep := range depsRepo {
 		depPath := filepath.Join("..", dep)
 		dr, err := gogit.PlainOpen(depPath)
@@ -185,7 +183,7 @@ func updateGomodWithTaggedDependencies(searchTag string, depsRepo []string, semv
 }
 
 // depImportPaths returns a comma separated string with each dependencies' import path.
-// Eg. "k8s.io/api,k8s.io/apimachinery,k8s.io/client-go".
+// Eg. "github.com/kcp-dev/apimachinery,github.com/kcp-dev/client-go".
 func depsImportPaths(depsRepo []string) (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -193,6 +191,10 @@ func depsImportPaths(depsRepo []string) (string, error) {
 	}
 	d := strings.Split(dir, "/")
 	basePackage := d[len(d)-2]
+	server := d[len(d)-3]
+	if server != "src" {
+		basePackage = fmt.Sprintf("%s/%s", server, basePackage)
+	}
 
 	depImportPathList := []string{}
 	for _, dep := range depsRepo {
